@@ -1,0 +1,68 @@
+---
+
+- hosts: all
+  become: true
+  tasks:
+
+  - name: Install Updates for Ubuntu
+    apt:
+      upgrade: dist
+      update_cache: yes
+    changed_when: false
+    when: ansible_distribution == "Ubuntu"
+    
+  - name: Install required system packages
+    apt:
+      pkg:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - software-properties-common
+        - python3-pip
+        - virtualenv
+        - python3-setuptools
+      state: latest
+      update_cache: true
+    
+  - name: Install docker
+    apt:
+      name: docker.io
+      state: latest
+
+  - name: Enable docker
+    service:
+      name: docker
+      state: restarted
+      enabled: true
+
+  - name: Start docker system
+    service:
+      name: docker
+      state: started
+      enabled: true
+
+  - name: Add Docker to group
+    command: sudo usermod -aG docker tipqc
+
+  - name: Restarting docker
+    command: sudo systemctl restart docker
+
+  - name: Import Dockerfile
+    copy:
+      src: ./Dockerfile
+      dest: /home/tipqc
+      owner: root
+      group: root
+      mode: '0755'
+
+  - name: Install and build Dockerfile
+    shell:
+     docker build - < Dockerfile
+
+  - name: Pulling docker image
+    shell:
+     docker pull ubuntu/apache2
+
+  - name: Accessing Containerized Apps
+    shell:
+      docker run -it -d -p 8080:80 ubuntu/apache2
